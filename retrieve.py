@@ -137,7 +137,40 @@ def hybrid_search(query: str, use_rerank: bool = True) -> list[dict]:
 def vector_only_search(query: str) -> list[dict]:
     query_embedding = embed_query(query)
     return vector_search(query_embedding, top_k=RERANK_TOP_N)
+def contextual_vector_search(query_embedding: list[float], top_k: int = VECTOR_TOP_K) -> list[dict]:
+    """Vector search on the contextual collection."""
+    results = qdrant.query_points(
+        collection_name="rag_chunks_contextual",
+        query=query_embedding,
+        limit=top_k,
+        with_payload=True,
+    ).points
 
+    return [
+        {
+            "id": r.payload.get("chunk_id", str(r.id)),
+            "text": r.payload.get("contextual_text", r.payload["text"]),
+            "score": r.score,
+            "metadata": {k: v for k, v in r.payload.items() if k not in ("text", "contextual_text")},
+        }
+        for r in results
+    ]
+
+
+def contextual_hybrid_search(query: str, use_rerank: bool = True) -> list[dict]:
+    """Full hybrid search using contextual embeddings."""
+    all_chunks = load_all_chunks()  # BM25 still uses original chunks
+
+    query_embedding = embed_query(query)
+    vec_results = contextual_vector_search(query_embedding)
+    bm25_results = bm25_search(query, all_chunks)
+
+    fused = rrf_fusion(vec_results, bm25_results)
+    top_50 = fused[:50]
+
+    if use_rerank:
+        return rerank(query, top_50)
+    return top_50[:RERANK_TOP_N]
 
 if __name__ == "__main__":
     query = "What is prompt caching and how does it reduce costs?"

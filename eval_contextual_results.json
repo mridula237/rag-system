@@ -1,0 +1,220 @@
+{
+  "summary": {
+    "recall@5": 0.5699603174603175,
+    "mrr": 0.8678571428571428,
+    "faithfulness": 0.8640000000000001,
+    "avg_latency": 1.180783567999606
+  },
+  "results": [
+    {
+      "question": "What is prompt caching?",
+      "recall@5": 0.7,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 2.7357859170006122
+    },
+    {
+      "question": "How long does a prompt cache last by default?",
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 1.592399832996307
+    },
+    {
+      "question": "What is the minimum number of tokens required for prompt caching?",
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "faithfulness": 0.2,
+      "latency": 2.6885652920173015
+    },
+    {
+      "question": "What embedding model does Anthropic recommend?",
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 1.5068225410068408
+    },
+    {
+      "question": "What is text-embedding-3-large?",
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 1.719708916003583
+    },
+    {
+      "question": "What does RRF stand for in retrieval?",
+      "recall@5": 0.0,
+      "mrr": 0.0,
+      "faithfulness": 1.0,
+      "latency": 1.1776462080015335
+    },
+    {
+      "question": "What is tool use in Claude?",
+      "recall@5": 0.6,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 2.0554867500031833
+    },
+    {
+      "question": "What is structured output in OpenAI?",
+      "recall@5": 0.7142857142857143,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 1.5834356670093257
+    },
+    {
+      "question": "What is RAG?",
+      "recall@5": 0.42857142857142855,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 1.56024612498004
+    },
+    {
+      "question": "What is the Claude API messages endpoint?",
+      "recall@5": 0.8333333333333334,
+      "mrr": 1.0,
+      "faithfulness": 0.2,
+      "latency": 1.3183339579845779
+    },
+    {
+      "question": "What is function calling?",
+      "recall@5": 0.5714285714285714,
+      "mrr": 1.0,
+      "faithfulness": 0.9,
+      "latency": 0.0
+    },
+    {
+      "question": "What is a system prompt?",
+      "recall@5": 0.8571428571428571,
+      "mrr": 1.0,
+      "faithfulness": 0.7,
+      "latency": 0.0
+    },
+    {
+      "question": "What are stop sequences?",
+      "recall@5": 0.3333333333333333,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 0.0
+    },
+    {
+      "question": "What is max_tokens?",
+      "recall@5": 0.875,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 0.0
+    },
+    {
+      "question": "What is temperature in LLMs?",
+      "recall@5": 0.2222222222222222,
+      "mrr": 0.25,
+      "faithfulness": 1.0,
+      "latency": 0.0
+    },
+    {
+      "question": "What is top_p sampling?",
+      "recall@5": 0.1111111111111111,
+      "mrr": 0.5,
+      "faithfulness": 1.0,
+      "latency": 0.0
+    },
+    {
+      "question": "What is streaming in the API?",
+      "recall@5": 0.375,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 0.0
+    },
+    {
+      "question": "What is a context window?",
+      "recall@5": 0.75,
+      "mrr": 1.0,
+      "faithfulness": 0.82,
+      "latency": 1.8021917910082266
+    },
+    {
+      "question": "What are embeddings used for?",
+      "recall@5": 0.8571428571428571,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 1.6380868339911103
+    },
+    {
+      "question": "What is cosine similarity?",
+      "recall@5": 0.7,
+      "mrr": 1.0,
+      "faithfulness": 0.85,
+      "latency": 1.8613787079812028
+    },
+    {
+      "question": "What is chunking in RAG?",
+      "recall@5": 0.42857142857142855,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 2.343536750006024
+    },
+    {
+      "question": "What is a vector database?",
+      "recall@5": 0.7142857142857143,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 1.628418625012273
+    },
+    {
+      "question": "What is BM25?",
+      "recall@5": 0.0,
+      "mrr": 0.14285714285714285,
+      "faithfulness": 0.4,
+      "latency": 1.1656335830048192
+    },
+    {
+      "question": "What is reranking?",
+      "recall@5": 0.375,
+      "mrr": 1.0,
+      "faithfulness": 0.85,
+      "latency": 1.3027047499781474
+    },
+    {
+      "question": "What is the Anthropic API key used for?",
+      "recall@5": 0.6666666666666666,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 2.442461208003806
+    },
+    {
+      "question": "What is Claude's training approach?",
+      "recall@5": 0.5,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 1.483210834005149
+    },
+    {
+      "question": "What is a cache breakpoint?",
+      "recall@5": 0.8571428571428571,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 1.8174527499941178
+    },
+    {
+      "question": "What are tool results?",
+      "recall@5": 0.2,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 0.0
+    },
+    {
+      "question": "What is pgvector?",
+      "recall@5": 0.42857142857142855,
+      "mrr": 1.0,
+      "faithfulness": 1.0,
+      "latency": 0.0
+    },
+    {
+      "question": "What is Qdrant?",
+      "recall@5": 0.0,
+      "mrr": 0.14285714285714285,
+      "faithfulness": 0.0,
+      "latency": 0.0
+    }
+  ]
+}
