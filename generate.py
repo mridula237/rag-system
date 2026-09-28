@@ -22,21 +22,36 @@ Output format (strict JSON):
 }"""
 
 
-def generate(query: str, use_hybrid: bool = True) -> dict:
+def generate(query: str, use_hybrid: bool = True, allow_web_fallback: bool = True) -> dict:
     if use_hybrid:
         chunks = hybrid_search(query)
     else:
         chunks = vector_only_search(query)
 
-    if not chunks:
-        return {"answer": "No relevant context found.", "citations": []}
+    # web search fallback
+    used_web = False
+    if allow_web_fallback:
+        try:
+            from web_search import should_fallback, web_search
+            if should_fallback(chunks):
+                print(f"  [fallback] weak retrieval, using web search")
+                chunks = web_search(query)
+                used_web = True
+        except Exception as e:
+            print(f"  [fallback] web search failed: {e}")
 
-    # build context block
+    if not chunks:
+        return {"answer": "No relevant context found.", "citations": [], "used_web": False}
+
     context = ""
     for i, chunk in enumerate(chunks):
         doc_id = chunk["metadata"].get("doc_id", "unknown")
         chunk_index = chunk["metadata"].get("chunk_index", i)
-        context += f"\n[{i+1}] doc_id={doc_id} chunk_index={chunk_index}\n{chunk['text']}\n"
+        url = chunk["metadata"].get("url", "")
+        context += f"\n[{i+1}] doc_id={doc_id} chunk_index={chunk_index}"
+        if url:
+            context += f" url={url}"
+        context += f"\n{chunk['text']}\n"
 
     r = openai.chat.completions.create(
         model=LLM_MODEL,
@@ -51,7 +66,6 @@ def generate(query: str, use_hybrid: bool = True) -> dict:
     raw = r.choices[0].message.content
     result = json.loads(raw)
 
-    # validate citations exist in chunks
     valid_citations = []
     chunk_ids = {(c["metadata"].get("doc_id"), c["metadata"].get("chunk_index")) for c in chunks}
     for cit in result.get("citations", []):
@@ -61,20 +75,5 @@ def generate(query: str, use_hybrid: bool = True) -> dict:
     result["citations"] = valid_citations
     result["chunks_used"] = len(chunks)
     result["model"] = LLM_MODEL
+    result["used_web_fallback"] = used_web
     return result
-
-
-if __name__ == "__main__":
-    queries = [
-        "What is prompt caching and how does it reduce costs?",
-        "What are the differences between Claude and GPT embeddings?",
-        "How does tool use work in the Anthropic API?",
-    ]
-
-    for query in queries:
-        print(f"\n{'='*60}")
-        print(f"Q: {query}")
-        result = generate(query)
-        print(f"\nA: {result['answer']}")
-        print(f"\nCitations: {json.dumps(result['citations'], indent=2)}")
-        print(f"Chunks used: {result['chunks_used']}")
