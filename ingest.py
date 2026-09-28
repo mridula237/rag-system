@@ -56,24 +56,20 @@ def setup_qdrant():
 # ── Chunking ──────────────────────────────────────────────────────────────────
 
 def extract_text(html_path: str) -> tuple[str, str]:
-    """Extract clean text and title from HTML."""
     with open(html_path, encoding="utf-8") as f:
         soup = BeautifulSoup(f.read(), "html.parser")
 
     title = soup.title.string if soup.title else Path(html_path).stem
 
-    # remove nav, footer, scripts
     for tag in soup(["script", "style", "nav", "footer", "header"]):
         tag.decompose()
 
     text = soup.get_text(separator="\n")
-    # clean up whitespace
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return title.strip(), text
 
 
 def chunk_text(text: str, doc_id: str, title: str) -> list[dict]:
-    """Split text into overlapping token chunks."""
     tokens = enc.encode(text)
     chunks = []
     start = 0
@@ -82,14 +78,14 @@ def chunk_text(text: str, doc_id: str, title: str) -> list[dict]:
     while start < len(tokens):
         end = min(start + CHUNK_SIZE, len(tokens))
         chunk_tokens = tokens[start:end]
-        chunk_text = enc.decode(chunk_tokens)
+        chunk_text_str = enc.decode(chunk_tokens)
 
         chunk_id = hashlib.md5(f"{doc_id}_{idx}".encode()).hexdigest()
         chunks.append({
             "id": chunk_id,
             "doc_id": doc_id,
             "chunk_index": idx,
-            "text": chunk_text,
+            "text": chunk_text_str,
             "metadata": {"title": title, "doc_id": doc_id, "chunk_index": idx}
         })
 
@@ -102,7 +98,6 @@ def chunk_text(text: str, doc_id: str, title: str) -> list[dict]:
 # ── Embedding ─────────────────────────────────────────────────────────────────
 
 def embed_batch(texts: list[str]) -> list[list[float]]:
-    """Embed a batch of texts using OpenAI."""
     r = openai.embeddings.create(model=EMBED_MODEL, input=texts)
     return [item.embedding for item in r.data]
 
@@ -147,10 +142,19 @@ def ingest():
     html_files = list(docs_dir.glob("*.html"))
     print(f"Found {len(html_files)} documents\n")
 
+    # check which docs have changed
+    from doc_tracker import check_and_update
+    changed_docs = check_and_update(str(docs_dir))
+
     total_chunks = 0
 
     for html_path in sorted(html_files):
         doc_id = html_path.stem
+
+        if doc_id not in changed_docs:
+            print(f"Skipping {doc_id} (unchanged)")
+            continue
+
         print(f"Processing {doc_id}...")
 
         title, text = extract_text(str(html_path))
@@ -161,7 +165,6 @@ def ingest():
         chunks = chunk_text(text, doc_id, title)
         print(f"  {len(chunks)} chunks from {len(text):,} chars")
 
-        # embed in batches of 20
         all_embeddings = []
         for i in range(0, len(chunks), 20):
             batch = chunks[i:i+20]
@@ -175,7 +178,10 @@ def ingest():
         print(f"  stored in pgvector + qdrant")
 
     conn.close()
-    print(f"\nDone. {total_chunks} total chunks indexed.")
+    if total_chunks == 0:
+        print("\nAll docs up to date — nothing re-embedded.")
+    else:
+        print(f"\nDone. {total_chunks} total chunks indexed.")
 
 
 if __name__ == "__main__":
