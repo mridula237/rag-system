@@ -19,7 +19,7 @@ qdrant = QdrantClient(url=QDRANT_URL)
 enc = tiktoken.get_encoding("cl100k_base")
 
 
-# ── DB setup ──────────────────────────────────────────────────────────────────
+# DB setup 
 
 def setup_postgres():
     conn = psycopg2.connect(PG_DSN)
@@ -53,7 +53,7 @@ def setup_qdrant():
         print(f"qdrant collection exists: {QDRANT_COLLECTION}")
 
 
-# ── Chunking ──────────────────────────────────────────────────────────────────
+# Chunking 
 
 def extract_text(html_path: str) -> tuple[str, str]:
     with open(html_path, encoding="utf-8") as f:
@@ -95,14 +95,14 @@ def chunk_text(text: str, doc_id: str, title: str) -> list[dict]:
     return chunks
 
 
-# ── Embedding ─────────────────────────────────────────────────────────────────
+# Embedding 
 
 def embed_batch(texts: list[str]) -> list[list[float]]:
     r = openai.embeddings.create(model=EMBED_MODEL, input=texts)
     return [item.embedding for item in r.data]
 
 
-# ── Storage ───────────────────────────────────────────────────────────────────
+# Storage 
 
 def store_postgres(conn, chunks: list[dict], embeddings: list[list[float]]):
     cur = conn.cursor()
@@ -131,7 +131,7 @@ def store_qdrant(chunks: list[dict], embeddings: list[list[float]]):
     qdrant.upsert(collection_name=QDRANT_COLLECTION, points=points)
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Main 
 
 def ingest():
     print("Setting up databases...")
@@ -142,7 +142,6 @@ def ingest():
     html_files = list(docs_dir.glob("*.html"))
     print(f"Found {len(html_files)} documents\n")
 
-    # check which docs have changed
     from doc_tracker import check_and_update
     changed_docs = check_and_update(str(docs_dir))
 

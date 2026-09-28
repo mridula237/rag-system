@@ -11,7 +11,7 @@ co = cohere.Client(COHERE_API_KEY)
 qdrant = QdrantClient(url=QDRANT_URL)
 
 
-# ── Load all chunks for BM25 ──────────────────────────────────────────────────
+#  Load all chunks for BM25 
 
 def load_all_chunks() -> list[dict]:
     conn = psycopg2.connect(PG_DSN)
@@ -27,14 +27,14 @@ def load_all_chunks() -> list[dict]:
     ]
 
 
-# ── Embed query ───────────────────────────────────────────────────────────────
+# Embed query 
 
 def embed_query(query: str) -> list[float]:
     r = openai.embeddings.create(model=EMBED_MODEL, input=[query])
     return r.data[0].embedding
 
 
-# ── Vector search (Qdrant) ────────────────────────────────────────────────────
+# Vector search (Qdrant) 
 
 def vector_search(query_embedding: list[float], top_k: int = VECTOR_TOP_K) -> list[dict]:
     results = qdrant.query_points(
@@ -55,7 +55,7 @@ def vector_search(query_embedding: list[float], top_k: int = VECTOR_TOP_K) -> li
     ]
 
 
-# ── BM25 search ───────────────────────────────────────────────────────────────
+# BM25 search 
 
 def bm25_search(query: str, all_chunks: list[dict], top_k: int = BM25_TOP_K) -> list[dict]:
     tokenized = [c["text"].lower().split() for c in all_chunks]
@@ -72,7 +72,7 @@ def bm25_search(query: str, all_chunks: list[dict], top_k: int = BM25_TOP_K) -> 
     ]
 
 
-# ── RRF fusion ────────────────────────────────────────────────────────────────
+# RRF fusion 
 
 def rrf_fusion(vector_results: list[dict], bm25_results: list[dict], k: int = 60) -> list[dict]:
     scores = {}
@@ -95,7 +95,7 @@ def rrf_fusion(vector_results: list[dict], bm25_results: list[dict], k: int = 60
     ]
 
 
-# ── Cohere rerank ─────────────────────────────────────────────────────────────
+# Cohere rerank 
 
 def rerank(query: str, candidates: list[dict], top_n: int = RERANK_TOP_N) -> list[dict]:
     if not candidates:
@@ -115,7 +115,7 @@ def rerank(query: str, candidates: list[dict], top_n: int = RERANK_TOP_N) -> lis
     ]
 
 
-# ── Hybrid search (full pipeline) ────────────────────────────────────────────
+# Hybrid search (full pipeline)
 
 def hybrid_search(query: str, use_rerank: bool = True) -> list[dict]:
     all_chunks = load_all_chunks()
@@ -132,7 +132,7 @@ def hybrid_search(query: str, use_rerank: bool = True) -> list[dict]:
     return top_50[:RERANK_TOP_N]
 
 
-# ── Vector only (for comparison) ─────────────────────────────────────────────
+# Vector only 
 
 def vector_only_search(query: str) -> list[dict]:
     query_embedding = embed_query(query)
@@ -159,8 +159,7 @@ def contextual_vector_search(query_embedding: list[float], top_k: int = VECTOR_T
 
 def contextual_hybrid_search(query: str, use_rerank: bool = True) -> list[dict]:
     """Full hybrid search using contextual embeddings."""
-    all_chunks = load_all_chunks()  # BM25 still uses original chunks
-
+    all_chunks = load_all_chunks()  
     query_embedding = embed_query(query)
     vec_results = contextual_vector_search(query_embedding)
     bm25_results = bm25_search(query, all_chunks)

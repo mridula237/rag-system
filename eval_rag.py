@@ -48,7 +48,6 @@ def recall_at_k(query: str, expected_answer: str, k: int = 5) -> float:
         emb = embed_query(query)
         results = vector_search(emb, top_k=k)
         combined = " ".join(r["text"].lower() for r in results)
-        # check if key terms from expected answer appear in retrieved chunks
         key_terms = [w.lower() for w in expected_answer.split() if len(w) > 4]
         if not key_terms:
             return 0.0

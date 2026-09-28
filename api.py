@@ -3,9 +3,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from openai import OpenAI
-from generate import generate
 
-from retrieve import contextual_hybrid_search, hybrid_search
+from retrieve import (
+    contextual_hybrid_search, hybrid_search, embed_query,
+    bm25_search, rrf_fusion, rerank, load_all_chunks
+)
 from config import LLM_MODEL
 
 app = FastAPI(title="RAG System")
@@ -24,6 +26,7 @@ class QueryRequest(BaseModel):
     use_contextual: bool = True
     stream: bool = False
     allow_web_fallback: bool = True
+    tenant_id: str = "default"
 
 
 def build_context(chunks: list[dict]) -> str:
@@ -39,13 +42,33 @@ def build_context(chunks: list[dict]) -> str:
     return context
 
 
+def get_chunks(req: QueryRequest) -> list[dict]:
+    """Retrieve chunks with optional tenant scoping."""
+    from tenant import tenant_vector_search
+    collection = "rag_chunks_contextual" if req.use_contextual else "rag_chunks"
+
+    query_embedding = embed_query(req.query)
+    vec_results = tenant_vector_search(query_embedding, req.tenant_id, collection)
+
+    # if no tenant-scoped results, fall back to unscoped search
+    if not vec_results:
+        if req.use_contextual:
+            return contextual_hybrid_search(req.query)
+        else:
+            return hybrid_search(req.query)
+
+    all_chunks = load_all_chunks()
+    bm25_results = bm25_search(req.query, all_chunks)
+    fused = rrf_fusion(vec_results, bm25_results)
+    return rerank(req.query, fused[:50])
+
+
 @app.post("/query")
 async def query(req: QueryRequest):
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    # always retrieve chunks first
-    chunks = contextual_hybrid_search(req.query) if req.use_contextual else hybrid_search(req.query)
+    chunks = get_chunks(req)
 
     # web search fallback if retrieval is weak
     used_web = False
@@ -67,7 +90,8 @@ async def query(req: QueryRequest):
     if req.stream:
         async def stream_response():
             citations = [
-                {"doc_id": c["metadata"].get("doc_id"), "chunk_index": c["metadata"].get("chunk_index")}
+                {"doc_id": c["metadata"].get("doc_id"),
+                 "chunk_index": c["metadata"].get("chunk_index")}
                 for c in chunks
             ]
             yield f"data: {json.dumps({'citations': citations, 'used_web': used_web})}\n\n"
@@ -96,6 +120,7 @@ async def query(req: QueryRequest):
     result = json.loads(r.choices[0].message.content)
     result["chunks_used"] = len(chunks)
     result["used_web_fallback"] = used_web
+    result["tenant_id"] = req.tenant_id
     return result
 
 

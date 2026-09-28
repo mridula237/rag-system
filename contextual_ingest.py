@@ -20,7 +20,6 @@ anthropic_client = Anthropic()
 qdrant = QdrantClient(url=QDRANT_URL)
 enc = tiktoken.get_encoding("cl100k_base")
 
-# new collection for contextual chunks
 CONTEXTUAL_COLLECTION = "rag_chunks_contextual"
 CONTEXTUAL_TABLE = "chunks_contextual"
 

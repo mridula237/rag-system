@@ -7,7 +7,7 @@ LLM_MODEL = "gpt-5.4-nano"
 RERANK_MODEL = "rerank-english-v3.0"
 
 # chunking
-CHUNK_SIZE = 400        # tokens
+CHUNK_SIZE = 400        
 CHUNK_OVERLAP = 80
 
 # retrieval
@@ -25,3 +25,4 @@ QDRANT_COLLECTION = "rag_chunks"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
+DEFAULT_TENANT = "default"

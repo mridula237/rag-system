@@ -60,7 +60,6 @@ def delete_chunks(doc_id: str):
     cur.close()
     conn.close()
 
-    # delete from qdrant
     from qdrant_client import QdrantClient
     from qdrant_client.models import Filter, FieldCondition, MatchValue
     from config import QDRANT_COLLECTION

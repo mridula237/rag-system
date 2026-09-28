@@ -3,7 +3,7 @@ from tavily import TavilyClient
 
 tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
 
-MIN_RERANK_SCORE = 0.1  # below this = weak retrieval, fall back to web
+MIN_RERANK_SCORE = 0.1  
 
 
 def should_fallback(chunks: list[dict]) -> bool:
