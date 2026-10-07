@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       canary_pct:
-        description: "Canary traffic % (0-100)"
+        description: "Canary traffic % for blue model (0-100)"
         required: false
         default: "10"
 
@@ -14,31 +14,89 @@ jobs:
   eval:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-      - name: Install deps
+          cache-dependency-path: "requirements.txt"
+
+      - name: Install dependencies
         run: |
-          pip install openai langfuse==2.60.0 sentence-transformers psycopg2-binary qdrant-client cohere presidio-analyzer presidio-anonymizer
+          pip install --upgrade pip
+          pip install -r requirements.txt
           python -m spacy download en_core_web_lg
-      - name: Start services
-        run: docker compose up -d && sleep 10
-      - name: Run eval
+
+      - name: Start pgvector + Qdrant
+        run: |
+          docker compose up -d
+          timeout 30 bash -c 'until pg_isready -h localhost -p 5433 -U rag; do sleep 2; done' || true
+          timeout 30 bash -c 'until curl -sf http://localhost:6333/healthz; do sleep 2; done' || true
+
+      - name: Run 50-case eval
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
           LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
           LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
-          LANGFUSE_HOST: ${{ secrets.LANGFUSE_HOST }}
-          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
-          CANARY_PCT: ${{ github.event.inputs.canary_pct || '10' }}
+          LANGFUSE_HOST:       ${{ secrets.LANGFUSE_HOST }}
+          COHERE_API_KEY:      ${{ secrets.COHERE_API_KEY }}
         run: |
           cd rag-system
           python eval/run_eval.py 2>&1 | tee eval_output.txt
-          python eval/canary.py   2>&1 | tee canary_output.txt
-      - name: Upload results
+
+      - name: Run canary routing test
+        env:
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_HOST:       ${{ secrets.LANGFUSE_HOST }}
+          CANARY_PCT:          ${{ github.event.inputs.canary_pct || '10' }}
+        run: |
+          cd rag-system
+          python eval/canary.py 2>&1 | tee canary_output.txt
+
+      - name: Check eval thresholds
+        id: check
+        run: |
+          cd rag-system
+          python - << 'EOF'
+          import json, sys, os
+          try:
+              with open("eval/full_eval_results.json") as f:
+                  results = json.load(f)
+          except FileNotFoundError:
+              print("::error::eval/full_eval_results.json not found")
+              sys.exit(1)
+          successful = [r for r in results if not r.get("error")]
+          n = len(successful)
+          if n == 0:
+              print("::error::All eval cases failed")
+              sys.exit(1)
+          sem_sim  = sum(r.get("semantic_similarity", 0) for r in successful) / n
+          citation = sum(r.get("citation_valid", 0) for r in successful) / n
+          shape    = sum(r.get("output_shape", 0) for r in successful) / n
+          print(f"n={n}  sem_sim={sem_sim:.3f}  citation={citation:.3f}  shape={shape:.3f}")
+          env_file = os.environ.get("GITHUB_OUTPUT", "")
+          if env_file:
+              with open(env_file, "a") as f:
+                  f.write(f"n={n}\nsem_sim={sem_sim:.3f}\ncitation={citation:.3f}\nshape={shape:.3f}\n")
+          THRESHOLDS = {"semantic_similarity":0.20,"citation_valid":0.50,"output_shape":0.70,"success_rate":0.80}
+          success_rate = n / len(results)
+          failures = []
+          if sem_sim      < THRESHOLDS["semantic_similarity"]: failures.append(f"sem_sim={sem_sim:.3f}")
+          if citation     < THRESHOLDS["citation_valid"]:      failures.append(f"citation={citation:.3f}")
+          if shape        < THRESHOLDS["output_shape"]:        failures.append(f"shape={shape:.3f}")
+          if success_rate < THRESHOLDS["success_rate"]:        failures.append(f"success_rate={success_rate:.2f}")
+          if failures:
+              for f in failures: print(f"::warning::Threshold breach: {f}")
+          else:
+              print("All thresholds passed ✅")
+          EOF
+
+      - name: Upload eval results
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -49,3 +107,16 @@ jobs:
             rag-system/eval_output.txt
             rag-system/canary_output.txt
           retention-days: 30
+
+      - name: Write job summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 📊 Daily RAG Eval — $(date -u +%Y-%m-%d)
+          | Metric | Value |
+          |--------|-------|
+          | Cases evaluated | ${{ steps.check.outputs.n }} / 50 |
+          | Semantic similarity | ${{ steps.check.outputs.sem_sim }} |
+          | Citation validity | ${{ steps.check.outputs.citation }} |
+          | Output shape | ${{ steps.check.outputs.shape }} |
+          EOF

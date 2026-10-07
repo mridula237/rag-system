@@ -1,0 +1,8 @@
+openai
+langfuse==2.60.0
+sentence-transformers
+psycopg2-binary
+qdrant-client
+cohere
+presidio-analyzer
+presidio-anonymizer
