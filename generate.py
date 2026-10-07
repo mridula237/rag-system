@@ -76,4 +76,5 @@ def generate(query: str, use_hybrid: bool = True, allow_web_fallback: bool = Tru
     result["chunks_used"] = len(chunks)
     result["model"] = LLM_MODEL
     result["used_web_fallback"] = used_web
+    result["chunks"] = chunks
     return result
