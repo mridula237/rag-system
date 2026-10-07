@@ -1,0 +1,51 @@
+name: Daily RAG Eval
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+    inputs:
+      canary_pct:
+        description: "Canary traffic % (0-100)"
+        required: false
+        default: "10"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install deps
+        run: |
+          pip install openai langfuse==2.60.0 sentence-transformers psycopg2-binary qdrant-client cohere presidio-analyzer presidio-anonymizer
+          python -m spacy download en_core_web_lg
+      - name: Start services
+        run: docker compose up -d && sleep 10
+      - name: Run eval
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_HOST: ${{ secrets.LANGFUSE_HOST }}
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+          CANARY_PCT: ${{ github.event.inputs.canary_pct || '10' }}
+        run: |
+          cd rag-system
+          python eval/run_eval.py 2>&1 | tee eval_output.txt
+          python eval/canary.py   2>&1 | tee canary_output.txt
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-results-${{ github.run_number }}
+          path: |
+            rag-system/eval/full_eval_results.json
+            rag-system/eval/canary_results.json
+            rag-system/eval_output.txt
+            rag-system/canary_output.txt
+          retention-days: 30
