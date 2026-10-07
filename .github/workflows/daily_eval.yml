@@ -44,7 +44,7 @@ jobs:
           LANGFUSE_HOST:       ${{ secrets.LANGFUSE_HOST }}
           COHERE_API_KEY:      ${{ secrets.COHERE_API_KEY }}
         run: |
-          cd rag-system
+
           python eval/run_eval.py 2>&1 | tee eval_output.txt
 
       - name: Run canary routing test
@@ -55,13 +55,13 @@ jobs:
           LANGFUSE_HOST:       ${{ secrets.LANGFUSE_HOST }}
           CANARY_PCT:          ${{ github.event.inputs.canary_pct || '10' }}
         run: |
-          cd rag-system
+
           python eval/canary.py 2>&1 | tee canary_output.txt
 
       - name: Check eval thresholds
         id: check
         run: |
-          cd rag-system
+
           python - << 'EOF'
           import json, sys, os
           try:
